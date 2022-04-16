@@ -1,6 +1,21 @@
 
 
 
+
+# 网上有关nn.ConvTranspose2d资料较少，这里做做实验
+
+import torch
+import torch.nn as nn
+
+IC = 2
+OC = 2
+K  = 2
+S  = 2
+P  = 0
+
+IH = 3
+IW = 3
+
 class MyDeconv():
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, bias=False):
         super(MyDeconv, self)
@@ -10,7 +25,6 @@ class MyDeconv():
         self.stride = stride
         self.padding = kernel_size - padding - 1
         self.weight = torch.ones(self.oc, self.ic, self.k, self.k)
-        
     def load(self, weight):
         print(f'w raw shape {self.weight.shape}')
         self.weight = weight
@@ -23,7 +37,6 @@ class MyDeconv():
         OH = (IH + 2*self.padding - self.k)//1 + 1
         OW = (IH + 2*self.padding - self.k)//1 + 1
         y = torch.zeros(1, self.ic, OH, OW)
-        
         ''' upsampling '''
         newx = torch.zeros(1,self.oc,IH,IW)
         for oc in range(self.oc):
@@ -47,3 +60,56 @@ class MyDeconv():
                             self.weight[oc,ic,:,:]
                         ).sum()
         return y
+
+if __name__ == "__main__":
+    
+    deconv_torch = nn.ConvTranspose2d(
+        in_channels=IC, 
+        out_channels=OC, 
+        kernel_size=K, 
+        stride=S, 
+        padding = P,
+        bias=False)
+    
+    
+    print(deconv_torch)
+    print(f'w raw shape is {deconv_torch.weight.shape}')
+    deconv_torch.weight = nn.Parameter(torch.ones(IC,OC,K,K).float())
+    deconv_torch.weight = nn.Parameter(torch.arange(IC*OC*K*K).view(IC,OC,K,K).float())
+    print(f'w changed shape is {deconv_torch.weight.shape}')
+    print(deconv_torch.weight)
+
+
+    x = torch.ones(1,IC,IH,IW)
+    x = torch.arange(0,IC*IH*IW).view(1,IC,IH,IW).float()
+    print(x)
+    print(f'x shape is {x.shape}')
+    y = deconv_torch(x)
+    print(f'y shape is {y.shape}')
+    print(y)
+
+
+    print('- - '*10)
+
+    deconv_np = MyDeconv(
+        in_channels=OC, 
+        out_channels=IC, 
+        kernel_size=K, 
+        stride=S, 
+        padding = 0,
+        bias=False
+        )
+    print(f'x shape is {x.shape}')
+    deconv_np.load(deconv_torch.weight)
+    
+    print(f'w shape is {deconv_torch.weight.shape}')
+    y = deconv_np(x)
+    print(f'y shape is {y.shape}')
+    print(y)
+    
+
+
+
+
+
+
